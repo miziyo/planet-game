@@ -124,6 +124,16 @@
             background-color: #e74c3c !important;
         }
 
+        /* Visualization Control Styles */
+        .vis-controls label {
+            display: block;
+            margin-bottom: 8px;
+            cursor: pointer;
+        }
+        .vis-controls input {
+            margin-right: 8px;
+        }
+
         /* Time Control Styles */
         .time-controls {
             display: flex;
@@ -219,6 +229,14 @@
         <div class="resizer" id="resizer"></div>
         <div class="controls-panel">
             <h2>컨트롤 패널</h2>
+
+            <div class="control-group">
+                <h3>시각화</h3>
+                <div class="vis-controls">
+                    <label><input type="checkbox" id="show-velocity-vectors"> 속도 벡터 표시</label>
+                    <label><input type="checkbox" id="show-acceleration-vectors"> 가속도 벡터 표시</label>
+                </div>
+            </div>
 
             <div class="control-group">
                 <h3>시간 제어</h3>

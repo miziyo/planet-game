@@ -19,6 +19,13 @@ let planet3DObjects = new Map();
 let focusedPlanet = null;
 let timeScale = 1.0;
 
+// Visualization state
+let velocityArrows = new Map();
+let accelerationArrows = new Map();
+let planetAccelerations = new Map(); // To store acceleration vectors for visualization
+let showVelocityVectors = false;
+let showAccelerationVectors = false;
+
 class Planet {
     constructor(name, x, y, z, vx, vy, vz, mass, radius, color) {
         this.name = name;
@@ -58,19 +65,33 @@ function updatePhysics() {
     // 2. 계산된 힘을 바탕으로 속도와 위치 업데이트
     for (const planet of planets) {
         const force = forces.get(planet);
-        if (!force) continue;
+        if (!force) {
+            planetAccelerations.set(planet, new THREE.Vector3(0, 0, 0));
+            continue;
+        };
 
-        const acceleration = force.divideScalar(planet.mass);
+        const acceleration = force.clone().divideScalar(planet.mass);
+        planetAccelerations.set(planet, acceleration); // 시각화를 위해 가속도 저장
 
-        planet.velocity.add(acceleration.multiplyScalar(timeScale));
+        planet.velocity.add(acceleration.clone().multiplyScalar(timeScale));
         planet.position.add(planet.velocity.clone().multiplyScalar(timeScale));
     }
 }
 
 function createInitialPlanets() {
-    planets = []; // 배열 초기화
+    // Clear previous objects
+    for (const planet of planets) {
+        const mesh = planet3DObjects.get(planet);
+        const velArrow = velocityArrows.get(planet);
+        const accArrow = accelerationArrows.get(planet);
+        if(mesh) scene.remove(mesh);
+        if(velArrow) scene.remove(velArrow);
+        if(accArrow) scene.remove(accArrow);
+    }
+    planets = [];
     planet3DObjects.clear();
-    // 이전에 있던 3D 객체들을 씬에서 제거하는 로직이 필요할 수 있으나, 지금은 생략
+    velocityArrows.clear();
+    accelerationArrows.clear();
 
     const planetData = [
         { name: 'Sun', x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, mass: 2000, radius: 100, color: 0xffff00 },
@@ -80,19 +101,7 @@ function createInitialPlanets() {
     ];
 
     planetData.forEach(data => {
-        const planet = new Planet(data.name, data.x, data.y, data.z, data.vx, data.vy, data.vz, data.mass, data.radius, data.color);
-        planets.push(planet);
-
-        const geometry = new THREE.SphereGeometry(data.radius, 32, 32);
-        const material = data.name === 'Sun'
-            ? new THREE.MeshBasicMaterial({ color: data.color }) // 태양은 스스로 빛나도록
-            : new THREE.MeshStandardMaterial({ color: data.color });
-
-        const sphere = new THREE.Mesh(geometry, material);
-        sphere.position.copy(planet.position);
-
-        scene.add(sphere);
-        planet3DObjects.set(planet, sphere);
+        addPlanet(data);
     });
 
     focusedPlanet = planets[0]; // Sun
@@ -134,11 +143,31 @@ function animate() {
     // 물리 업데이트
     updatePhysics();
 
-    // 3D 객체 위치 업데이트
+    // 3D 객체 및 시각화 업데이트
     for (const planet of planets) {
         const mesh = planet3DObjects.get(planet);
         if (mesh) {
             mesh.position.copy(planet.position);
+        }
+
+        // 속도 벡터 업데이트
+        const velArrow = velocityArrows.get(planet);
+        if (velArrow) {
+            velArrow.position.copy(planet.position);
+            velArrow.setDirection(planet.velocity.clone().normalize());
+            // 길이는 로그 스케일 등을 적용하면 더 보기 좋지만, 일단은 직접적인 길이로
+            velArrow.setLength(planet.velocity.length() * 20, 20, 10);
+            velArrow.visible = showVelocityVectors;
+        }
+
+        // 가속도 벡터 업데이트
+        const accArrow = accelerationArrows.get(planet);
+        const acceleration = planetAccelerations.get(planet);
+        if (accArrow && acceleration) {
+            accArrow.position.copy(planet.position);
+            accArrow.setDirection(acceleration.clone().normalize());
+            accArrow.setLength(acceleration.length() * 5000, 20, 10); // 가속도는 값이 작으므로 길이를 더 크게 증폭
+            accArrow.visible = showAccelerationVectors;
         }
     }
 
@@ -256,36 +285,56 @@ function renderAddPlanetForm() {
     `;
 }
 
+function addPlanet(data) {
+    const planet = new Planet(data.name, data.x, data.y, data.z, data.vx, data.vy, data.vz, data.mass, data.radius, data.color);
+    planets.push(planet);
+
+    // 3D 구체 생성
+    const geometry = new THREE.SphereGeometry(data.radius, 32, 32);
+    const material = data.name === 'Sun'
+        ? new THREE.MeshBasicMaterial({ color: data.color })
+        : new THREE.MeshStandardMaterial({ color: data.color });
+    const sphere = new THREE.Mesh(geometry, material);
+    sphere.position.copy(planet.position);
+    scene.add(sphere);
+    planet3DObjects.set(planet, sphere);
+
+    // 속도 벡터 애로우 생성
+    const velArrow = new THREE.ArrowHelper(new THREE.Vector3(1,0,0), planet.position, 100, 0x00ff00);
+    velArrow.visible = showVelocityVectors;
+    scene.add(velArrow);
+    velocityArrows.set(planet, velArrow);
+
+    // 가속도 벡터 애로우 생성
+    const accArrow = new THREE.ArrowHelper(new THREE.Vector3(1,0,0), planet.position, 100, 0xff00ff);
+    accArrow.visible = showAccelerationVectors;
+    scene.add(accArrow);
+    accelerationArrows.set(planet, accArrow);
+}
+
+
 addPlanetFormContainer.addEventListener('submit', (event) => {
     event.preventDefault();
 
-    const x = parseFloat(document.getElementById('planet-x').value);
-    const y = parseFloat(document.getElementById('planet-y').value);
-    const z = parseFloat(document.getElementById('planet-z').value);
-    const vx = parseFloat(document.getElementById('planet-vx').value);
-    const vy = parseFloat(document.getElementById('planet-vy').value);
-    const vz = parseFloat(document.getElementById('planet-vz').value);
-    const mass = parseFloat(document.getElementById('planet-mass').value);
-    const radius = parseFloat(document.getElementById('planet-radius').value);
-    const color = new THREE.Color(document.getElementById('planet-color').value).getHex();
+    const data = {
+        name: `Planet #${planets.length}`,
+        x: parseFloat(document.getElementById('planet-x').value),
+        y: parseFloat(document.getElementById('planet-y').value),
+        z: parseFloat(document.getElementById('planet-z').value),
+        vx: parseFloat(document.getElementById('planet-vx').value),
+        vy: parseFloat(document.getElementById('planet-vy').value),
+        vz: parseFloat(document.getElementById('planet-vz').value),
+        mass: parseFloat(document.getElementById('planet-mass').value),
+        radius: parseFloat(document.getElementById('planet-radius').value),
+        color: new THREE.Color(document.getElementById('planet-color').value).getHex()
+    };
 
-    if ([x, y, z, vx, vy, vz, mass, radius].some(isNaN)) {
+    if (Object.values(data).slice(1).some(isNaN)) { // name 빼고 모두 검사
         alert('Please enter valid numbers for all fields.');
         return;
     }
 
-    const planetName = `Planet #${planets.length}`;
-    const newPlanet = new Planet(planetName, x, y, z, vx, vy, vz, mass, radius, color);
-    planets.push(newPlanet);
-
-    const geometry = new THREE.SphereGeometry(radius, 32, 32);
-    const material = new THREE.MeshStandardMaterial({ color: color });
-    const sphere = new THREE.Mesh(geometry, material);
-    sphere.position.copy(newPlanet.position);
-
-    scene.add(sphere);
-    planet3DObjects.set(newPlanet, sphere);
-
+    addPlanet(data);
     updatePlanetList();
     renderAddPlanetForm();
 });
@@ -304,15 +353,23 @@ planetListContainer.addEventListener('click', (event) => {
             focusedPlanet = planets[0]; // Reset focus to sun
         }
 
-        // Remove 3D object from scene
+        // Remove all associated 3D objects from scene
         const mesh = planet3DObjects.get(planet);
         if (mesh) {
             scene.remove(mesh);
             mesh.geometry.dispose();
             mesh.material.dispose();
         }
+        const velArrow = velocityArrows.get(planet);
+        if (velArrow) scene.remove(velArrow);
+        const accArrow = accelerationArrows.get(planet);
+        if (accArrow) scene.remove(accArrow);
 
+        // Delete from maps and array
         planet3DObjects.delete(planet);
+        velocityArrows.delete(planet);
+        accelerationArrows.delete(planet);
+        planetAccelerations.delete(planet);
         planets.splice(planetIndex, 1);
 
         updatePlanetList();
@@ -356,6 +413,19 @@ canvas.addEventListener('click', (event) => {
     // 배경을 클릭한 경우 포커스를 태양으로 리셋합니다.
     focusedPlanet = planets[0]; // sun
     updatePlanetList();
+});
+
+
+// --- 시각화 UI 로직 ---
+const showVelocityCheckbox = document.getElementById('show-velocity-vectors');
+const showAccelerationCheckbox = document.getElementById('show-acceleration-vectors');
+
+showVelocityCheckbox.addEventListener('change', (e) => {
+    showVelocityVectors = e.target.checked;
+});
+
+showAccelerationCheckbox.addEventListener('change', (e) => {
+    showAccelerationVectors = e.target.checked;
 });
 
 
