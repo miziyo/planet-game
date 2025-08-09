@@ -78,7 +78,21 @@ function updatePhysics() {
     }
 }
 
-function createInitialPlanets() {
+const SCENARIOS = {
+    'default': [
+        { name: 'Sun', x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, mass: 2000, radius: 100, color: 0xffff00 },
+        { name: 'Earth', x: -1200, y: 0, z: 0, vx: 0, vy: 2.5, vz: 0, mass: 10, radius: 20, color: 0x3498db },
+        { name: 'Mars', x: 1800, y: 0, z: 0, vx: 0, vy: -2, vz: 0, mass: 8, radius: 18, color: 0xe74c3c },
+        { name: 'Jupiter', x: 0, y: 0, z: -2500, vx: 1.8, vy: 0, vz: 0, mass: 100, radius: 50, color: 0xf39c12 }
+    ],
+    'binary_star': [
+        { name: 'Star A', x: -400, y: 0, z: 0, vx: 0, vy: 2, vz: 0, mass: 1200, radius: 80, color: 0xffa500 },
+        { name: 'Star B', x: 600, y: 0, z: 0, vx: 0, vy: -3, vz: 0, mass: 800, radius: 60, color: 0xadd8e6 },
+        { name: 'Planet', x: 0, y: 0, z: 4000, vx: 2, vy: 0, vz: 0, mass: 15, radius: 25, color: 0x90ee90 }
+    ]
+};
+
+function createInitialPlanets(scenarioId = 'default') {
     // Clear previous objects
     for (const planet of planets) {
         const mesh = planet3DObjects.get(planet);
@@ -92,19 +106,20 @@ function createInitialPlanets() {
     planet3DObjects.clear();
     velocityArrows.clear();
     accelerationArrows.clear();
+    planetAccelerations.clear();
 
-    const planetData = [
-        { name: 'Sun', x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, mass: 2000, radius: 100, color: 0xffff00 },
-        { name: 'Earth', x: -1200, y: 0, z: 0, vx: 0, vy: 2.5, vz: 0, mass: 10, radius: 20, color: 0x3498db },
-        { name: 'Mars', x: 1800, y: 0, z: 0, vx: 0, vy: -2, vz: 0, mass: 8, radius: 18, color: 0xe74c3c },
-        { name: 'Jupiter', x: 0, y: 0, z: -2500, vx: 1.8, vy: 0, vz: 0, mass: 100, radius: 50, color: 0xf39c12 }
-    ];
+    const planetData = SCENARIOS[scenarioId];
+    if (!planetData) {
+        console.error(`Scenario with id "${scenarioId}" not found.`);
+        return;
+    }
 
     planetData.forEach(data => {
         addPlanet(data);
     });
 
-    focusedPlanet = planets[0]; // Sun
+    focusedPlanet = planets.length > 0 ? planets[0] : null;
+    updatePlanetList();
 }
 
 
@@ -204,7 +219,7 @@ window.addEventListener('resize', resizeCanvas);
 // --- Initialization ---
 console.log("Setting up 3D environment...");
 init3D();
-createInitialPlanets();
+createInitialPlanets('default');
 animate();
 
 // --- 기존 UI 함수들의 재구현 ---
@@ -413,6 +428,16 @@ canvas.addEventListener('click', (event) => {
     // 배경을 클릭한 경우 포커스를 태양으로 리셋합니다.
     focusedPlanet = planets[0]; // sun
     updatePlanetList();
+});
+
+
+// --- 시나리오 UI 로직 ---
+const scenarioSelect = document.getElementById('scenario-select');
+const loadScenarioBtn = document.getElementById('load-scenario-btn');
+
+loadScenarioBtn.addEventListener('click', () => {
+    const selectedScenario = scenarioSelect.value;
+    createInitialPlanets(selectedScenario);
 });
 
 

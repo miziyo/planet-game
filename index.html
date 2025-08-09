@@ -134,6 +134,32 @@
             margin-right: 8px;
         }
 
+        /* Scenario Control Styles */
+        .scenario-controls {
+            display: flex;
+            gap: 10px;
+        }
+        .scenario-controls select {
+            flex-grow: 1;
+            padding: 8px;
+            background-color: #333;
+            border: 1px solid #555;
+            color: #fff;
+            border-radius: 4px;
+        }
+        .scenario-controls button {
+            padding: 8px 12px;
+            background-color: #3498db;
+            border: none;
+            color: #fff;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .scenario-controls button:hover {
+            background-color: #2980b9;
+        }
+
         /* Time Control Styles */
         .time-controls {
             display: flex;
@@ -229,6 +255,19 @@
         <div class="resizer" id="resizer"></div>
         <div class="controls-panel">
             <h2>컨트롤 패널</h2>
+
+            <div class="control-group">
+                <h3>시나리오 선택</h3>
+                <div class="scenario-controls">
+                    <select id="scenario-select">
+                        <option value="default">기본 태양계</option>
+                        <option value="binary_star">쌍성계</option>
+                        <option value="asteroid_collision" disabled>소행성 충돌 (구현 예정)</option>
+                        <option value="black_hole" disabled>블랙홀 (구현 예정)</option>
+                    </select>
+                    <button id="load-scenario-btn">불러오기</button>
+                </div>
+            </div>
 
             <div class="control-group">
                 <h3>시각화</h3>
