@@ -14,6 +14,7 @@ const G = 6.67;
 let planets = [];
 let focusedPlanet = null;
 let timeScale = 1.0;
+let editingIndex = -1; // -1 means no planet is being edited
 
 // --- SVG Camera/View State ---
 let view = {
@@ -108,6 +109,12 @@ const SCENARIOS = {
         { name: 'Star A', x: -100, y: 0, vx: 0, vy: 1, mass: 1200, radius: 15, color: '#ffA500' },
         { name: 'Star B', x: 150, y: 0, vx: 0, vy: -1.5, mass: 800, radius: 12, color: '#add8e6' },
         { name: 'Planet', x: 0, y: 1000, vx: -2, vy: 0, mass: 15, radius: 5, color: '#90ee90' }
+    ],
+    'asteroid_collision': [
+        { name: 'Target Planet', x: 0, y: 0, vx: 0, vy: 0, mass: 1000, radius: 30, color: '#2ecc71' },
+        { name: 'Asteroid 1', x: -800, y: 200, vx: 2, vy: -0.5, mass: 1, radius: 3, color: '#bdc3c7' },
+        { name: 'Asteroid 2', x: -700, y: -300, vx: 1.5, vy: 1, mass: 2, radius: 4, color: '#95a5a6' },
+        { name: 'Asteroid 3', x: 900, y: 100, vx: -2.5, vy: 0, mass: 1.5, radius: 3, color: '#7f8c8d' }
     ]
 };
 
@@ -151,7 +158,18 @@ function animate() {
 }
 
 // --- UI and Event Listeners ---
-function updatePlanetInfo() { /* To be re-implemented if needed */ }
+function updatePlanetInfo() {
+    planets.forEach((planet, index) => {
+        if (editingIndex === index) return; // Don't update while editing
+        const posElement = document.getElementById(`planet-${index}-pos`);
+        const velElement = document.getElementById(`planet-${index}-vel`);
+        if (posElement && velElement) {
+            posElement.textContent = `Pos: (${planet.x.toFixed(0)}, ${planet.y.toFixed(0)})`;
+            velElement.textContent = `Vel: (${planet.vx.toFixed(2)}, ${planet.vy.toFixed(2)})`;
+        }
+    });
+}
+
 function updatePlanetList() {
     planetListContainer.innerHTML = '';
     planets.forEach((planet, index) => {
@@ -160,21 +178,83 @@ function updatePlanetList() {
         planetElement.dataset.index = index;
         if (planet === focusedPlanet) planetElement.classList.add('focused');
 
-        planetElement.innerHTML = `
-            <div class="planet-main-info">
-                <div class="planet-color-swatch" style="background-color: ${planet.color};"></div>
-                <span>${planet.name} (Mass: ${planet.mass})</span>
-            </div>
-        `;
+        if (editingIndex === index) {
+            // Render editing form
+            planetElement.innerHTML = `
+                <div class="planet-edit-form">
+                    <input class="edit-name" value="${planet.name}">
+                    <input class="edit-mass" type="number" value="${planet.mass}">
+                    <input class="edit-radius" type="number" value="${planet.radius}">
+                    <input class="edit-vx" type="number" step="0.1" value="${planet.vx}">
+                    <input class="edit-vy" type="number" step="0.1" value="${planet.vy}">
+                    <input class="edit-color" type="color" value="${planet.color}">
+                    <div class="planet-actions">
+                        <button class="save-btn">Save</button>
+                        <button class="cancel-btn">Cancel</button>
+                    </div>
+                </div>
+            `;
+        } else {
+            // Render normal view
+            planetElement.innerHTML = `
+                <div class="planet-main-info">
+                    <div class="planet-color-swatch" style="background-color: ${planet.color};"></div>
+                    <span>${planet.name} (Mass: ${planet.mass})</span>
+                </div>
+                <div class="planet-details">
+                    <span id="planet-${index}-pos">Pos: ...</span>
+                    <span id="planet-${index}-vel">Vel: ...</span>
+                </div>
+                <div class="planet-actions">
+                    <button class="edit-btn">Edit</button>
+                    ${planet.name !== 'Sun' && planet.name !== 'Star A' && planet.name !== 'Star B' ? `<button class="remove-btn">Remove</button>` : ''}
+                </div>
+            `;
+        }
         planetListContainer.appendChild(planetElement);
     });
 }
+
 planetListContainer.addEventListener('click', (event) => {
     const planetItem = event.target.closest('.planet-item');
     if (!planetItem) return;
+
     const planetIndex = parseInt(planetItem.dataset.index, 10);
-    focusedPlanet = planets[planetIndex];
-    updatePlanetList();
+    const planet = planets[planetIndex];
+
+    if (event.target.classList.contains('edit-btn')) {
+        editingIndex = planetIndex;
+        updatePlanetList();
+    } else if (event.target.classList.contains('cancel-btn')) {
+        editingIndex = -1;
+        updatePlanetList();
+    } else if (event.target.classList.contains('save-btn')) {
+        const form = planetItem.querySelector('.planet-edit-form');
+        planet.name = form.querySelector('.edit-name').value;
+        planet.mass = parseFloat(form.querySelector('.edit-mass').value);
+        planet.radius = parseFloat(form.querySelector('.edit-radius').value);
+        planet.vx = parseFloat(form.querySelector('.edit-vx').value);
+        planet.vy = parseFloat(form.querySelector('.edit-vy').value);
+        planet.color = form.querySelector('.edit-color').value;
+
+        // Update SVG element
+        planet.el.setAttribute('r', planet.radius);
+        planet.el.setAttribute('fill', planet.color);
+
+        editingIndex = -1;
+        updatePlanetList();
+    } else if (event.target.classList.contains('remove-btn')) {
+        if (focusedPlanet === planet) {
+            focusedPlanet = planets.length > 1 ? planets[0] : null;
+        }
+        planet.removeFrom(svgGroup);
+        planets.splice(planetIndex, 1);
+        editingIndex = -1; // Reset editing state
+        updatePlanetList();
+    } else {
+        focusedPlanet = planet;
+        updatePlanetList();
+    }
 });
 
 // Simple SVG pan and zoom
@@ -222,6 +302,49 @@ function updateTimeScaleDisplay() {
     timeScaleDisplay.textContent = `x${timeScale.toFixed(2)}`;
 }
 
+function renderAddPlanetForm() {
+    addPlanetFormContainer.innerHTML = `
+        <form id="add-planet-form" style="display: flex; flex-direction: column; gap: 10px;">
+            <div style="display: flex; gap: 8px;">
+                <input type="number" id="planet-x" placeholder="x" value="${Math.floor(Math.random() * 500) - 250}" required style="width:50px">
+                <input type="number" id="planet-y" placeholder="y" value="${Math.floor(Math.random() * 500) - 250}" required style="width:50px">
+                <input type="number" id="planet-vx" placeholder="vx" value="${(Math.random() * 4 - 2).toFixed(1)}" required step="0.1" style="width:50px">
+                <input type="number" id="planet-vy" placeholder="vy" value="${(Math.random() * 4 - 2).toFixed(1)}" required step="0.1" style="width:50px">
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <input type="number" id="planet-mass" placeholder="mass" value="10" required style="width:60px">
+                <input type="number" id="planet-radius" placeholder="radius" value="5" required style="width:60px">
+                <input type="color" id="planet-color" value="#${Math.floor(Math.random()*16777215).toString(16).padStart(6, '0')}" required style="width:60px">
+                <button type="submit" style="flex-grow:1;">Add Planet</button>
+            </div>
+        </form>
+    `;
+
+    document.getElementById('add-planet-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const data = {
+            name: `Planet ${planets.length}`,
+            x: parseFloat(document.getElementById('planet-x').value),
+            y: parseFloat(document.getElementById('planet-y').value),
+            vx: parseFloat(document.getElementById('planet-vx').value),
+            vy: parseFloat(document.getElementById('planet-vy').value),
+            mass: parseFloat(document.getElementById('planet-mass').value),
+            radius: parseFloat(document.getElementById('planet-radius').value),
+            color: document.getElementById('planet-color').value
+        };
+        if (Object.values(data).slice(1).some(v => isNaN(v) && typeof v !== 'string')) {
+            alert('Please fill all fields correctly.');
+            return;
+        }
+        const newPlanet = new Planet(data);
+        planets.push(newPlanet);
+        newPlanet.addTo(svgGroup);
+        updatePlanetList();
+        renderAddPlanetForm();
+    });
+}
+
+
 // --- Initialization ---
 function init() {
     svg.innerHTML = ''; // Clear SVG
@@ -229,6 +352,7 @@ function init() {
     svg.appendChild(svgGroup);
 
     loadScenario('default');
+    renderAddPlanetForm();
     animate();
 }
 
