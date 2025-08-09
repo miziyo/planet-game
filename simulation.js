@@ -167,6 +167,9 @@ function updatePlanetList() {
     planets.forEach((planet, index) => {
         const planetElement = document.createElement('div');
         planetElement.className = 'planet-item';
+        planetElement.dataset.index = index; // 항목 자체에 인덱스를 부여합니다.
+        planetElement.style.cursor = 'pointer'; // 클릭 가능함을 나타냅니다.
+
         if (planet === focusedPlanet) {
             planetElement.classList.add('focused');
         }
@@ -178,34 +181,37 @@ function updatePlanetList() {
             <div class="planet-color-swatch" style="background-color: ${planet.color};"></div>
             <span>${planetName} (Mass: ${planet.mass})</span>
             <div class="planet-actions">
-                <button data-index="${index}" class="focus-btn">Focus</button>
-                ${index > 0 ? `<button data-index="${index}" class="remove-btn">Remove</button>` : ''}
+                ${index > 0 ? `<button class="remove-btn">Remove</button>` : ''}
             </div>
         `;
         planetListContainer.appendChild(planetElement);
     });
 }
 
-// 이벤트 위임을 사용하여 행성 목록의 버튼 클릭을 효율적으로 처리합니다.
+// 이벤트 위임을 사용하여 행성 목록의 클릭을 처리합니다.
 planetListContainer.addEventListener('click', (event) => {
     const target = event.target;
-    if (!target.dataset.index) return; // 버튼이 아니면 무시
 
-    const planetIndex = parseInt(target.dataset.index, 10);
+    // 클릭된 대상의 가장 가까운 .planet-item 조상을 찾습니다.
+    const planetItem = target.closest('.planet-item');
+    if (!planetItem) return; // 행성 아이템이 아니면 무시
+
+    const planetIndex = parseInt(planetItem.dataset.index, 10);
     const planet = planets[planetIndex];
 
-    if (target.classList.contains('focus-btn')) {
-        focusedPlanet = planet;
-        updatePlanetList();
-    }
-
+    // 삭제 버튼이 클릭된 경우
     if (target.classList.contains('remove-btn')) {
         if (focusedPlanet === planet) {
             focusedPlanet = sun; // 삭제된 행성이 포커스된 경우, 포커스를 태양으로 리셋
         }
         planets.splice(planetIndex, 1);
         updatePlanetList();
+        return; // 포커스 로직을 실행하지 않고 종료
     }
+
+    // 그 외의 경우, 아이템 클릭으로 간주하고 포커스합니다.
+    focusedPlanet = planet;
+    updatePlanetList();
 });
 
 // 캔버스 클릭 이벤트를 처리하여 화면 전환 기능을 구현합니다.

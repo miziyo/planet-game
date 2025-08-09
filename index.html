@@ -131,6 +131,25 @@
         #add-planet-form button[type="submit"]:hover {
             background-color: #2ecc71;
         }
+
+        /* Responsive Layout */
+        @media (max-width: 800px) {
+            body {
+                flex-direction: column;
+            }
+            .controls-panel {
+                width: 100%;
+                height: 50vh;
+                min-width: unset;
+                border-left: none;
+                border-top: 2px solid #333;
+                box-sizing: border-box;
+            }
+            #simulationCanvas {
+                height: 50vh;
+                flex-grow: 0; /* flex-grow: 1 can cause issues in column layout */
+            }
+        }
     </style>
 </head>
 <body>
