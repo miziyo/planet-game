@@ -3,15 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>행성 시뮬레이션 (3D)</title>
-    <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com/three@0.164.1/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.164.1/examples/jsm/"
-            }
-        }
-    </script>
+    <title>행성 시뮬레이션 (2D SVG)</title>
     <style>
         body {
             margin: 0;
@@ -24,9 +16,10 @@
             height: 100vh;
             overflow: hidden;
         }
-        #simulationCanvas {
+        #simulation-svg {
             background-color: #000;
             width: 50%; /* Initial width */
+            height: 100%;
         }
         .resizer {
             flex-shrink: 0;
@@ -92,7 +85,7 @@
             grid-column: 1 / 3;
             font-size: 0.8em;
             color: #ccc;
-            padding-left: 35px; /* Align with text */
+            padding-left: 35px;
             display: flex;
             gap: 15px;
             margin-top: 5px;
@@ -114,69 +107,19 @@
             cursor: pointer;
             font-size: 0.8em;
         }
-        .planet-actions button:hover {
-            background-color: #666;
-        }
         .remove-btn {
             background-color: #c0392b !important;
         }
-        .remove-btn:hover {
-            background-color: #e74c3c !important;
-        }
-
-        /* Visualization Control Styles */
-        .vis-controls label {
-            display: block;
-            margin-bottom: 8px;
-            cursor: pointer;
-        }
-        .vis-controls input {
-            margin-right: 8px;
-        }
-
-        /* Scenario Control Styles */
-        .scenario-controls {
+        .scenario-controls, .time-controls {
             display: flex;
             gap: 10px;
         }
-        .scenario-controls select {
-            flex-grow: 1;
+        select, .time-controls button, .scenario-controls button {
             padding: 8px;
             background-color: #333;
             border: 1px solid #555;
             color: #fff;
             border-radius: 4px;
-        }
-        .scenario-controls button {
-            padding: 8px 12px;
-            background-color: #3498db;
-            border: none;
-            color: #fff;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-        .scenario-controls button:hover {
-            background-color: #2980b9;
-        }
-
-        /* Time Control Styles */
-        .time-controls {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .time-controls button {
-            padding: 8px 12px;
-            font-size: 1em;
-            background-color: #444;
-            border: none;
-            color: #fff;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        .time-controls button:hover {
-            background-color: #555;
         }
         #time-scale-display {
             font-size: 1.1em;
@@ -184,100 +127,30 @@
             color: #3498db;
             min-width: 50px;
             text-align: center;
+            align-self: center;
         }
-
-        /* Form Styles */
-        #add-planet-form {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-        .form-row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            align-items: center;
-        }
-        .form-row label {
-            width: 100%;
-            font-size: 0.9em;
-            color: #ccc;
-            margin-bottom: 2px;
-        }
-        .form-row input {
-            flex-grow: 1;
-            padding: 8px;
-            background-color: #333;
-            border: 1px solid #555;
-            color: #fff;
-            border-radius: 4px;
-            width: 40%; /* Ensure two inputs fit on one line */
-            box-sizing: border-box;
-        }
-        #add-planet-form button[type="submit"] {
-            padding: 10px;
-            border: none;
-            background-color: #27ae60;
-            color: #fff;
+        #add-planet-form button[type="submit"], .scenario-controls button {
+            background-color: #3498db;
             font-weight: bold;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-top: 10px;
-            font-size: 1em;
-        }
-        #add-planet-form button[type="submit"]:hover {
-            background-color: #2ecc71;
-        }
-
-        /* Responsive Layout */
-        @media (max-width: 800px) {
-            .main-container {
-                flex-direction: column;
-            }
-            .controls-panel {
-                width: 100%;
-                height: 50vh;
-                min-width: unset;
-                border-left: none;
-                border-top: 2px solid #333;
-                box-sizing: border-box;
-            }
-            #simulationCanvas {
-                height: 50vh;
-                flex-grow: 0;
-            }
         }
     </style>
 </head>
 <body>
     <div class="main-container">
-        <canvas id="simulationCanvas"></canvas>
+        <svg id="simulation-svg"></svg>
         <div class="resizer" id="resizer"></div>
         <div class="controls-panel">
-            <h2>컨트롤 패널</h2>
-
+            <h2>컨트롤 패널 (2D SVG)</h2>
             <div class="control-group">
                 <h3>시나리오 선택</h3>
                 <div class="scenario-controls">
                     <select id="scenario-select">
                         <option value="default">기본 태양계</option>
                         <option value="binary_star">쌍성계</option>
-                        <option value="asteroid_collision" disabled>소행성 충돌 (구현 예정)</option>
-                        <option value="black_hole" disabled>블랙홀 (구현 예정)</option>
                     </select>
                     <button id="load-scenario-btn">불러오기</button>
                 </div>
             </div>
-
-            <div class="control-group">
-                <h3>시각화</h3>
-                <div class="vis-controls">
-                    <label><input type="checkbox" id="show-velocity-vectors"> 속도 벡터 표시</label>
-                    <label><input type="checkbox" id="show-acceleration-vectors"> 가속도 벡터 표시</label>
-                    <label><input type="checkbox" id="show-wireframe"> 와이어프레임 렌더링</label>
-                </div>
-            </div>
-
             <div class="control-group">
                 <h3>시간 제어</h3>
                 <div class="time-controls">
@@ -288,22 +161,16 @@
                     <span id="time-scale-display">x1.0</span>
                 </div>
             </div>
-
             <div class="control-group">
                 <h3>행성 목록</h3>
-                <div id="planet-list-container">
-                    <!-- 행성 목록이 여기에 동적으로 추가됩니다. -->
-                </div>
+                <div id="planet-list-container"></div>
             </div>
-
             <div class="control-group">
                 <h3>새 행성 추가</h3>
-                <div id="add-planet-form-container">
-                    <!-- 행성 추가 폼이 여기에 동적으로 추가됩니다. -->
-                </div>
+                <div id="add-planet-form-container"></div>
             </div>
         </div>
     </div>
-    <script type="module" src="simulation.js"></script>
+    <script src="simulation.js"></script>
 </body>
 </html>
