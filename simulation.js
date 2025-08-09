@@ -1,9 +1,17 @@
 const canvas = document.getElementById('simulationCanvas');
 const ctx = canvas.getContext('2d');
+const planetListContainer = document.getElementById('planet-list-container');
+const addPlanetFormContainer = document.getElementById('add-planet-form-container');
 
-// 캔버스 크기를 창에 맞게 설정합니다.
-canvas.width = window.innerWidth * 0.95;
-canvas.height = window.innerHeight * 0.95;
+// 캔버스 크기를 CSS에 의해 결정된 실제 크기로 설정하고, 창 크기 변경에 대응합니다.
+function resizeCanvas() {
+    canvas.width = canvas.clientWidth;
+    canvas.height = canvas.clientHeight;
+    // 리사이즈 시 초기 행성 위치가 깨지지 않도록 재배치 로직이 필요할 수 있으나,
+    // 우선은 캔버스 크기만 조절합니다.
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas(); // 초기 사이즈 설정
 
 // 시뮬레이션에 맞게 조절된 중력 상수입니다.
 const G = 6.67;
@@ -18,10 +26,26 @@ class Planet {
         this.mass = mass;
         this.radius = radius;
         this.color = color;
+        this.trail = []; // 궤적을 저장할 배열
     }
 
-    // 캔버스에 행성을 그리는 메소드입니다.
+    // 캔버스에 행성과 궤적을 그리는 메소드입니다.
     draw() {
+        // 궤적 그리기
+        if (this.trail.length > 1) {
+            ctx.beginPath();
+            ctx.moveTo(this.trail[0].x, this.trail[0].y);
+            for (let i = 1; i < this.trail.length; i++) {
+                ctx.lineTo(this.trail[i].x, this.trail[i].y);
+            }
+            ctx.strokeStyle = this.color;
+            ctx.lineWidth = 1;
+            ctx.globalAlpha = 0.6; // 궤적을 약간 투명하게
+            ctx.stroke();
+            ctx.globalAlpha = 1.0; // 다시 불투명하게
+        }
+
+        // 행성 본체 그리기
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
         ctx.fillStyle = this.color;
@@ -93,17 +117,26 @@ function update() {
         planets[i].vy += totalForceY / planets[i].mass;
     }
 
-    // 업데이트된 속도를 이용해 위치를 변경합니다.
+    // 업데이트된 속도를 이용해 위치를 변경하고 궤적을 기록합니다.
     for (const planet of planets) {
         planet.x += planet.vx;
         planet.y += planet.vy;
+
+        // 궤적 배열에 현재 위치를 추가합니다.
+        planet.trail.unshift({ x: planet.x, y: planet.y });
+
+        // 궤적의 최대 길이를 300으로 제한합니다.
+        const MAX_TRAIL_LENGTH = 300;
+        if (planet.trail.length > MAX_TRAIL_LENGTH) {
+            planet.trail.pop();
+        }
     }
 }
 
 // 애니메이션 루프입니다.
 function animate() {
-    // 캔버스를 약간 투명한 검은색으로 덮어 잔상 효과를 만듭니다.
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+    // 캔버스를 완전히 검은색으로 지웁니다.
+    ctx.fillStyle = 'black';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     // 좌표계를 저장합니다.
@@ -125,6 +158,55 @@ function animate() {
 
     requestAnimationFrame(animate);
 }
+
+// --- UI 컨트롤 로직 ---
+
+function updatePlanetList() {
+    planetListContainer.innerHTML = ''; // 목록을 비웁니다.
+
+    planets.forEach((planet, index) => {
+        const planetElement = document.createElement('div');
+        planetElement.className = 'planet-item';
+        if (planet === focusedPlanet) {
+            planetElement.classList.add('focused');
+        }
+
+        // 태양과 일반 행성을 구분하여 이름을 부여합니다.
+        const planetName = planet.mass > 1000 ? 'Sun' : `Planet #${index}`;
+
+        planetElement.innerHTML = `
+            <div class="planet-color-swatch" style="background-color: ${planet.color};"></div>
+            <span>${planetName} (Mass: ${planet.mass})</span>
+            <div class="planet-actions">
+                <button data-index="${index}" class="focus-btn">Focus</button>
+                ${index > 0 ? `<button data-index="${index}" class="remove-btn">Remove</button>` : ''}
+            </div>
+        `;
+        planetListContainer.appendChild(planetElement);
+    });
+}
+
+// 이벤트 위임을 사용하여 행성 목록의 버튼 클릭을 효율적으로 처리합니다.
+planetListContainer.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!target.dataset.index) return; // 버튼이 아니면 무시
+
+    const planetIndex = parseInt(target.dataset.index, 10);
+    const planet = planets[planetIndex];
+
+    if (target.classList.contains('focus-btn')) {
+        focusedPlanet = planet;
+        updatePlanetList();
+    }
+
+    if (target.classList.contains('remove-btn')) {
+        if (focusedPlanet === planet) {
+            focusedPlanet = sun; // 삭제된 행성이 포커스된 경우, 포커스를 태양으로 리셋
+        }
+        planets.splice(planetIndex, 1);
+        updatePlanetList();
+    }
+});
 
 // 캔버스 클릭 이벤트를 처리하여 화면 전환 기능을 구현합니다.
 canvas.addEventListener('click', (event) => {
@@ -155,13 +237,70 @@ canvas.addEventListener('click', (event) => {
     }
 
     if (clickedOnPlanet) {
-        // 행성을 클릭했다면, 해당 행성에 포커스합니다.
         focusedPlanet = clickedOnPlanet;
     } else {
-        // 배경을 클릭했다면, 태양으로 포커스를 리셋합니다.
         focusedPlanet = sun;
     }
+    updatePlanetList(); // 포커스가 변경되었으므로 목록 UI를 업데이트합니다.
 });
 
-// 시뮬레이션을 시작합니다.
+
+function renderAddPlanetForm() {
+    addPlanetFormContainer.innerHTML = `
+        <form id="add-planet-form">
+            <div class="form-row">
+                <label>Position (x, y) - relative to center</label>
+                <input type="number" id="planet-x" value="${Math.floor(Math.random() * 400) - 200}" required>
+                <input type="number" id="planet-y" value="${Math.floor(Math.random() * 400) - 200}" required>
+            </div>
+            <div class="form-row">
+                <label>Velocity (vx, vy)</label>
+                <input type="number" id="planet-vx" value="${(Math.random() * 4 - 2).toFixed(1)}" step="0.1" required>
+                <input type="number" id="planet-vy" value="${(Math.random() * 4 - 2).toFixed(1)}" step="0.1" required>
+            </div>
+            <div class="form-row">
+                <label>Mass</label>
+                <input type="number" id="planet-mass" value="${Math.floor(Math.random() * 20) + 5}" min="1" required>
+                <label>Radius</label>
+                <input type="number" id="planet-radius" value="${Math.floor(Math.random() * 5) + 3}" min="1" required>
+            </div>
+            <div class="form-row">
+                <label>Color</label>
+                <input type="color" id="planet-color" value="#${Math.floor(Math.random()*16777215).toString(16).padStart(6, '0')}" required>
+            </div>
+            <button type="submit">Add Planet</button>
+        </form>
+    `;
+}
+
+addPlanetFormContainer.addEventListener('submit', (event) => {
+    event.preventDefault();
+
+    // 입력값을 가져와 숫자로 변환합니다.
+    const x = parseFloat(document.getElementById('planet-x').value) + (canvas.width / 2);
+    const y = parseFloat(document.getElementById('planet-y').value) + (canvas.height / 2);
+    const vx = parseFloat(document.getElementById('planet-vx').value);
+    const vy = parseFloat(document.getElementById('planet-vy').value);
+    const mass = parseFloat(document.getElementById('planet-mass').value);
+    const radius = parseFloat(document.getElementById('planet-radius').value);
+    const color = document.getElementById('planet-color').value;
+
+    // 유효성 검사
+    if ([x, y, vx, vy, mass, radius].some(isNaN)) {
+        alert('Please enter valid numbers for all fields.');
+        return;
+    }
+
+    const newPlanet = new Planet(x, y, vx, vy, mass, radius, color);
+    planets.push(newPlanet);
+    updatePlanetList(); // 새 행성이 추가되었으니 목록을 새로고침합니다.
+
+    // 다음 입력을 위해 폼의 일부 값을 랜덤화합니다.
+    renderAddPlanetForm();
+});
+
+
+// --- 초기화 ---
+updatePlanetList(); // 시뮬레이션 시작 시 행성 목록을 처음으로 생성합니다.
+renderAddPlanetForm(); // 행성 추가 폼을 렌더링합니다.
 animate();

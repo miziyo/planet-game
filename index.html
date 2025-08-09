@@ -7,20 +7,151 @@
     <style>
         body {
             margin: 0;
-            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            color: #fff;
+            background-color: #111;
             display: flex;
-            justify-content: center;
-            align-items: center;
             height: 100vh;
+            overflow: hidden;
+        }
+        #simulationCanvas {
+            flex-grow: 1;
             background-color: #000;
         }
-        canvas {
-            border: 1px solid #fff;
+        .controls-panel {
+            width: 380px;
+            min-width: 300px;
+            padding: 20px;
+            overflow-y: auto;
+            background-color: #1a1a1a;
+            border-left: 2px solid #333;
+            box-shadow: -5px 0 15px rgba(0,0,0,0.3);
+        }
+        h2, h3 {
+            margin-top: 0;
+            border-bottom: 1px solid #444;
+            padding-bottom: 10px;
+            color: #eee;
+        }
+        .control-group {
+            margin-bottom: 25px;
+            background-color: #252525;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        #planet-list-container {
+            max-height: 30vh;
+            overflow-y: auto;
+        }
+        .planet-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            margin-bottom: 8px;
+            background-color: #333;
+            border-radius: 4px;
+            border-left: 5px solid transparent;
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+        .planet-item.focused {
+            border-left-color: #3498db;
+            background-color: #404040;
+        }
+        .planet-color-swatch {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 15px;
+            flex-shrink: 0;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .planet-item span {
+            flex-grow: 1;
+            font-size: 0.95em;
+        }
+        .planet-actions button {
+            padding: 5px 8px;
+            margin-left: 5px;
+            border: none;
+            background-color: #555;
+            color: #fff;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.8em;
+        }
+        .planet-actions button:hover {
+            background-color: #666;
+        }
+        .remove-btn {
+            background-color: #c0392b !important;
+        }
+        .remove-btn:hover {
+            background-color: #e74c3c !important;
+        }
+
+        /* Form Styles */
+        #add-planet-form {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .form-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+        .form-row label {
+            width: 100%;
+            font-size: 0.9em;
+            color: #ccc;
+            margin-bottom: 2px;
+        }
+        .form-row input {
+            flex-grow: 1;
+            padding: 8px;
+            background-color: #333;
+            border: 1px solid #555;
+            color: #fff;
+            border-radius: 4px;
+            width: 40%; /* Ensure two inputs fit on one line */
+            box-sizing: border-box;
+        }
+        #add-planet-form button[type="submit"] {
+            padding: 10px;
+            border: none;
+            background-color: #27ae60;
+            color: #fff;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+            font-size: 1em;
+        }
+        #add-planet-form button[type="submit"]:hover {
+            background-color: #2ecc71;
         }
     </style>
 </head>
 <body>
     <canvas id="simulationCanvas"></canvas>
+    <div class="controls-panel">
+        <h2>컨트롤 패널</h2>
+
+        <div class="control-group">
+            <h3>행성 목록</h3>
+            <div id="planet-list-container">
+                <!-- 행성 목록이 여기에 동적으로 추가됩니다. -->
+            </div>
+        </div>
+
+        <div class="control-group">
+            <h3>새 행성 추가</h3>
+            <div id="add-planet-form-container">
+                <!-- 행성 추가 폼이 여기에 동적으로 추가됩니다. -->
+            </div>
+        </div>
+    </div>
     <script src="simulation.js"></script>
 </body>
 </html>
