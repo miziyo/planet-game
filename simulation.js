@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'; // Will use TextureLoader for now
 
 // --- DOM References ---
 const canvas = document.getElementById('simulationCanvas');
@@ -24,6 +25,27 @@ let showVelocityVectors = false;
 let showAccelerationVectors = false;
 let showWireframe = false;
 
+// --- Asset Management ---
+const ASSETS = {
+    'Sun': 'https://raw.githubusercontent.com/jules-dot-ai/swe-bench/main/assets/sun_texture.jpg',
+    'Earth': 'https://raw.githubusercontent.com/jules-dot-ai/swe-bench/main/assets/earth_texture.jpg',
+    'Mars': 'https://raw.githubusercontent.com/jules-dot-ai/swe-bench/main/assets/mars_texture.jpg',
+    'Jupiter': 'https://raw.githubusercontent.com/jules-dot-ai/swe-bench/main/assets/jupiter_texture.jpg',
+    'Generic': 'https://raw.githubusercontent.com/jules-dot-ai/swe-bench/main/assets/generic_texture.jpg'
+};
+let loadedTextures = {};
+
+function loadAssets() {
+    const loader = new THREE.TextureLoader();
+    const promises = Object.entries(ASSETS).map(([name, url]) => {
+        return loader.loadAsync(url).then(texture => {
+            loadedTextures[name] = texture;
+        });
+    });
+    return Promise.all(promises);
+}
+
+
 // --- Core Planet Class (Redesigned) ---
 class Planet {
     constructor(data) {
@@ -38,9 +60,11 @@ class Planet {
 
         // 3D Object Properties
         const geometry = new THREE.SphereGeometry(this.radius, 32, 32);
+        const texture = loadedTextures[this.name] || loadedTextures['Generic'];
+
         this.solidMat = data.name === 'Sun'
-            ? new THREE.MeshBasicMaterial({ color: this.color })
-            : new THREE.MeshStandardMaterial({ color: this.color });
+            ? new THREE.MeshBasicMaterial({ map: texture })
+            : new THREE.MeshStandardMaterial({ map: texture });
         this.wireframeMat = new THREE.MeshBasicMaterial({ color: this.color, wireframe: true });
 
         this.mesh = new THREE.Mesh(geometry, this.solidMat);
@@ -357,7 +381,14 @@ function renderAddPlanetForm() {
 }
 
 // --- Start Simulation ---
-init3D();
-loadScenario('default');
-animate();
-renderAddPlanetForm(); // Render the add form initially
+console.log("Loading assets...");
+loadAssets().then(() => {
+    console.log("Assets loaded. Initializing simulation...");
+    init3D();
+    loadScenario('default');
+    animate();
+    renderAddPlanetForm();
+}).catch(error => {
+    console.error("Could not load assets:", error);
+    alert("Fatal Error: Could not load 3D assets. Please check the console for details.");
+});
