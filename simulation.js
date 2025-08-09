@@ -75,10 +75,13 @@ planets.push(jupiter);
 
 // 현재 화면의 중심에 올 행성입니다. 처음에는 태양으로 설정합니다.
 let focusedPlanet = sun;
+let timeScale = 1.0;
 
 
 // 행성의 위치를 업데이트하는 함수입니다.
 function update() {
+    if (timeScale === 0) return; // 시간이 멈췄으면 업데이트하지 않습니다.
+
     // 각 행성에 작용하는 총 힘을 계산합니다.
     for (let i = 0; i < planets.length; i++) {
         let totalForceX = 0;
@@ -112,18 +115,21 @@ function update() {
             totalForceY += forceY;
         }
 
-        // 힘을 이용해 가속도를 계산하고(a = F/m), 속도를 업데이트합니다.
-        planets[i].vx += totalForceX / planets[i].mass;
-        planets[i].vy += totalForceY / planets[i].mass;
+        // 힘을 이용해 가속도를 계산하고(a = F/m), 시간 배속을 적용하여 속도를 업데이트합니다.
+        planets[i].vx += (totalForceX / planets[i].mass) * timeScale;
+        planets[i].vy += (totalForceY / planets[i].mass) * timeScale;
     }
 
     // 업데이트된 속도를 이용해 위치를 변경하고 궤적을 기록합니다.
     for (const planet of planets) {
-        planet.x += planet.vx;
-        planet.y += planet.vy;
+        planet.x += planet.vx * timeScale;
+        planet.y += planet.vy * timeScale;
 
         // 궤적 배열에 현재 위치를 추가합니다.
-        planet.trail.unshift({ x: planet.x, y: planet.y });
+        // 시간이 빨리 흐를 때는 궤적 점을 덜 추가하여 부드럽게 보이도록 합니다.
+        if (Math.random() < 1 / Math.sqrt(timeScale + 1)) {
+             planet.trail.unshift({ x: planet.x, y: planet.y });
+        }
 
         // 궤적의 최대 길이를 300으로 제한합니다.
         const MAX_TRAIL_LENGTH = 300;
@@ -156,10 +162,28 @@ function animate() {
     // 좌표계를 복원합니다.
     ctx.restore();
 
+    // UI 정보를 업데이트합니다.
+    updatePlanetInfo();
+
     requestAnimationFrame(animate);
 }
 
 // --- UI 컨트롤 로직 ---
+
+function updatePlanetInfo() {
+    planets.forEach((planet, index) => {
+        const posElement = document.getElementById(`planet-${index}-pos`);
+        const velElement = document.getElementById(`planet-${index}-vel`);
+
+        if (posElement && velElement) {
+            // 태양을 기준으로 한 상대 좌표를 계산합니다. (태양 자신은 0,0)
+            const relX = planet.x - sun.x;
+            const relY = planet.y - sun.y;
+            posElement.textContent = `Pos: (${relX.toFixed(0)}, ${relY.toFixed(0)})`;
+            velElement.textContent = `Vel: (${planet.vx.toFixed(2)}, ${planet.vy.toFixed(2)})`;
+        }
+    });
+}
 
 function updatePlanetList() {
     planetListContainer.innerHTML = ''; // 목록을 비웁니다.
@@ -177,9 +201,16 @@ function updatePlanetList() {
         // 태양과 일반 행성을 구분하여 이름을 부여합니다.
         const planetName = planet.mass > 1000 ? 'Sun' : `Planet #${index}`;
 
+        // 상세 정보를 표시할 구조를 추가합니다.
         planetElement.innerHTML = `
-            <div class="planet-color-swatch" style="background-color: ${planet.color};"></div>
-            <span>${planetName} (Mass: ${planet.mass})</span>
+            <div class="planet-main-info">
+                <div class="planet-color-swatch" style="background-color: ${planet.color};"></div>
+                <span>${planetName} (Mass: ${planet.mass})</span>
+            </div>
+            <div class="planet-details">
+                <span id="planet-${index}-pos">Pos: ...</span>
+                <span id="planet-${index}-vel">Vel: ...</span>
+            </div>
             <div class="planet-actions">
                 ${index > 0 ? `<button class="remove-btn">Remove</button>` : ''}
             </div>
@@ -303,6 +334,38 @@ addPlanetFormContainer.addEventListener('submit', (event) => {
 
     // 다음 입력을 위해 폼의 일부 값을 랜덤화합니다.
     renderAddPlanetForm();
+});
+
+
+// --- 시간 제어 로직 ---
+const timeScaleDisplay = document.getElementById('time-scale-display');
+const slowerBtn = document.getElementById('time-slower-btn');
+const pauseBtn = document.getElementById('time-pause-btn');
+const playBtn = document.getElementById('time-play-btn');
+const fasterBtn = document.getElementById('time-faster-btn');
+
+function updateTimeScaleDisplay() {
+    timeScaleDisplay.textContent = `x${timeScale.toFixed(2)}`;
+}
+
+slowerBtn.addEventListener('click', () => {
+    timeScale /= 2;
+    updateTimeScaleDisplay();
+});
+
+pauseBtn.addEventListener('click', () => {
+    timeScale = 0;
+    updateTimeScaleDisplay();
+});
+
+playBtn.addEventListener('click', () => {
+    timeScale = 1.0;
+    updateTimeScaleDisplay();
+});
+
+fasterBtn.addEventListener('click', () => {
+    timeScale *= 2;
+    updateTimeScaleDisplay();
 });
 
 

@@ -52,7 +52,8 @@
             overflow-y: auto;
         }
         .planet-item {
-            display: flex;
+            display: grid;
+            grid-template-columns: 1fr auto;
             align-items: center;
             padding: 10px;
             margin-bottom: 8px;
@@ -74,8 +75,25 @@
             flex-shrink: 0;
             border: 1px solid rgba(255,255,255,0.1);
         }
+        .planet-main-info {
+            display: flex;
+            align-items: center;
+            grid-column: 1 / 2;
+        }
+        .planet-details {
+            grid-column: 1 / 3;
+            font-size: 0.8em;
+            color: #ccc;
+            padding-left: 35px; /* Align with text */
+            display: flex;
+            gap: 15px;
+            margin-top: 5px;
+        }
+        .planet-actions {
+            grid-column: 2 / 3;
+            grid-row: 1 / 2;
+        }
         .planet-item span {
-            flex-grow: 1;
             font-size: 0.95em;
         }
         .planet-actions button {
@@ -96,6 +114,32 @@
         }
         .remove-btn:hover {
             background-color: #e74c3c !important;
+        }
+
+        /* Time Control Styles */
+        .time-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .time-controls button {
+            padding: 8px 12px;
+            font-size: 1em;
+            background-color: #444;
+            border: none;
+            color: #fff;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .time-controls button:hover {
+            background-color: #555;
+        }
+        #time-scale-display {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #3498db;
+            min-width: 50px;
+            text-align: center;
         }
 
         /* Form Styles */
@@ -167,6 +211,17 @@
         <div class="resizer" id="resizer"></div>
         <div class="controls-panel">
             <h2>컨트롤 패널</h2>
+
+            <div class="control-group">
+                <h3>시간 제어</h3>
+                <div class="time-controls">
+                    <button id="time-slower-btn">⏪</button>
+                    <button id="time-pause-btn">⏸️</button>
+                    <button id="time-play-btn">▶️</button>
+                    <button id="time-faster-btn">⏩</button>
+                    <span id="time-scale-display">x1.0</span>
+                </div>
+            </div>
 
             <div class="control-group">
                 <h3>행성 목록</h3>
