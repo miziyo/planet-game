@@ -96,11 +96,16 @@ const SCENARIOS = {
 function createInitialPlanets(scenarioId = 'default') {
     // Clear previous objects
     for (const planet of planets) {
-        const mesh = planet3DObjects.get(planet);
+        const planetObjects = planet3DObjects.get(planet);
+        if (planetObjects) {
+            scene.remove(planetObjects.mesh);
+            planetObjects.mesh.geometry.dispose();
+            planetObjects.solidMat.dispose();
+            planetObjects.wireframeMat.dispose();
+        }
         const velArrow = velocityArrows.get(planet);
-        const accArrow = accelerationArrows.get(planet);
-        if(mesh) scene.remove(mesh);
         if(velArrow) scene.remove(velArrow);
+        const accArrow = accelerationArrows.get(planet);
         if(accArrow) scene.remove(accArrow);
     }
     planets = [];
@@ -312,7 +317,8 @@ function addPlanet(data) {
         : new THREE.MeshStandardMaterial({ color: data.color });
     const wireframeMat = new THREE.MeshBasicMaterial({ color: data.color, wireframe: true });
 
-    const sphere = new THREE.Mesh(geometry, solidMat);
+    const initialMat = showWireframe ? wireframeMat : solidMat;
+    const sphere = new THREE.Mesh(geometry, initialMat);
     sphere.position.copy(planet.position);
     scene.add(sphere);
 
