@@ -25,6 +25,7 @@ let accelerationArrows = new Map();
 let planetAccelerations = new Map(); // To store acceleration vectors for visualization
 let showVelocityVectors = false;
 let showAccelerationVectors = false;
+let showWireframe = false;
 
 class Planet {
     constructor(name, x, y, z, vx, vy, vz, mass, radius, color) {
@@ -304,15 +305,19 @@ function addPlanet(data) {
     const planet = new Planet(data.name, data.x, data.y, data.z, data.vx, data.vy, data.vz, data.mass, data.radius, data.color);
     planets.push(planet);
 
-    // 3D 구체 생성
+    // 3D 구체 및 재질 생성
     const geometry = new THREE.SphereGeometry(data.radius, 32, 32);
-    const material = data.name === 'Sun'
+    const solidMat = data.name === 'Sun'
         ? new THREE.MeshBasicMaterial({ color: data.color })
         : new THREE.MeshStandardMaterial({ color: data.color });
-    const sphere = new THREE.Mesh(geometry, material);
+    const wireframeMat = new THREE.MeshBasicMaterial({ color: data.color, wireframe: true });
+
+    const sphere = new THREE.Mesh(geometry, solidMat);
     sphere.position.copy(planet.position);
     scene.add(sphere);
-    planet3DObjects.set(planet, sphere);
+
+    // 3D 객체와 재질들을 함께 저장
+    planet3DObjects.set(planet, { mesh: sphere, solidMat, wireframeMat });
 
     // 속도 벡터 애로우 생성
     const velArrow = new THREE.ArrowHelper(new THREE.Vector3(1,0,0), planet.position, 100, 0x00ff00);
@@ -369,11 +374,12 @@ planetListContainer.addEventListener('click', (event) => {
         }
 
         // Remove all associated 3D objects from scene
-        const mesh = planet3DObjects.get(planet);
-        if (mesh) {
-            scene.remove(mesh);
-            mesh.geometry.dispose();
-            mesh.material.dispose();
+        const planetObjects = planet3DObjects.get(planet);
+        if (planetObjects) {
+            scene.remove(planetObjects.mesh);
+            planetObjects.mesh.geometry.dispose();
+            planetObjects.solidMat.dispose();
+            planetObjects.wireframeMat.dispose();
         }
         const velArrow = velocityArrows.get(planet);
         if (velArrow) scene.remove(velArrow);
@@ -444,6 +450,7 @@ loadScenarioBtn.addEventListener('click', () => {
 // --- 시각화 UI 로직 ---
 const showVelocityCheckbox = document.getElementById('show-velocity-vectors');
 const showAccelerationCheckbox = document.getElementById('show-acceleration-vectors');
+const showWireframeCheckbox = document.getElementById('show-wireframe');
 
 showVelocityCheckbox.addEventListener('change', (e) => {
     showVelocityVectors = e.target.checked;
@@ -451,6 +458,17 @@ showVelocityCheckbox.addEventListener('change', (e) => {
 
 showAccelerationCheckbox.addEventListener('change', (e) => {
     showAccelerationVectors = e.target.checked;
+});
+
+showWireframeCheckbox.addEventListener('change', (e) => {
+    showWireframe = e.target.checked;
+    // 모든 행성의 재질을 즉시 업데이트
+    for (const planet of planets) {
+        const planetObjects = planet3DObjects.get(planet);
+        if (planetObjects) {
+            planetObjects.mesh.material = showWireframe ? planetObjects.wireframeMat : planetObjects.solidMat;
+        }
+    }
 });
 
 
