@@ -3,7 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>행성 시뮬레이션</title>
+    <title>행성 시뮬레이션 (3D)</title>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.164.1/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.164.1/examples/jsm/"
+            }
+        }
+    </script>
     <style>
         body {
             margin: 0;
@@ -238,6 +246,6 @@
             </div>
         </div>
     </div>
-    <script src="simulation.js"></script>
+    <script type="module" src="simulation.js"></script>
 </body>
 </html>
