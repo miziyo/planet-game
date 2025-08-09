@@ -17,17 +17,23 @@
             overflow: hidden;
         }
         #simulationCanvas {
-            flex-grow: 1;
             background-color: #000;
+            width: 50%; /* Initial width */
+        }
+        .resizer {
+            flex-shrink: 0;
+            background: #444;
+            width: 5px;
+            cursor: col-resize;
+            z-index: 10;
         }
         .controls-panel {
-            width: 380px;
-            min-width: 300px;
+            width: 50%; /* Initial width */
             padding: 20px;
             overflow-y: auto;
             background-color: #1a1a1a;
-            border-left: 2px solid #333;
             box-shadow: -5px 0 15px rgba(0,0,0,0.3);
+            box-sizing: border-box;
         }
         h2, h3 {
             margin-top: 0;
@@ -158,6 +164,7 @@
 <body>
     <div class="main-container">
         <canvas id="simulationCanvas"></canvas>
+        <div class="resizer" id="resizer"></div>
         <div class="controls-panel">
             <h2>컨트롤 패널</h2>
 

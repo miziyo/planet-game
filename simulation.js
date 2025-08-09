@@ -306,6 +306,58 @@ addPlanetFormContainer.addEventListener('submit', (event) => {
 });
 
 
+// --- 드래그 리사이즈 로직 ---
+const resizer = document.getElementById('resizer');
+const controlsPanel = document.querySelector('.controls-panel');
+
+resizer.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+
+    // 마우스 이동과 떼기 이벤트를 최상위 window에 추가합니다.
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+
+    function handleMouseMove(e) {
+        // 현재 창의 너비와 높이를 가져옵니다.
+        const container = resizer.parentElement;
+        const containerRect = container.getBoundingClientRect();
+
+        // 현재 레이아웃이 세로인지 가로인지 확인합니다.
+        const isVertical = getComputedStyle(container).flexDirection === 'column';
+
+        if (isVertical) {
+            // 세로 모드일 때 (높이 조절)
+            const newCanvasHeight = e.clientY - containerRect.top;
+            const newControlsHeight = containerRect.height - newCanvasHeight;
+
+            // 최소/최대 크기 제한
+            if (newCanvasHeight > 100 && newControlsHeight > 100) {
+                canvas.style.height = `${newCanvasHeight}px`;
+                controlsPanel.style.height = `${newControlsHeight}px`;
+            }
+        } else {
+            // 가로 모드일 때 (너비 조절)
+            const newCanvasWidth = e.clientX - containerRect.left;
+            const newControlsWidth = containerRect.width - newCanvasWidth;
+
+            // 최소/최대 크기 제한
+            if (newCanvasWidth > 200 && newControlsWidth > 200) {
+                canvas.style.width = `${newCanvasWidth}px`;
+                controlsPanel.style.width = `${newControlsWidth}px`;
+            }
+        }
+        // 캔버스의 내부 해상도를 DOM 크기에 맞게 업데이트합니다.
+        resizeCanvas();
+    }
+
+    function handleMouseUp() {
+        // 마우스 버튼을 떼면 이벤트 리스너를 제거합니다.
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+    }
+});
+
+
 // --- 초기화 ---
 updatePlanetList(); // 시뮬레이션 시작 시 행성 목록을 처음으로 생성합니다.
 renderAddPlanetForm(); // 행성 추가 폼을 렌더링합니다.
