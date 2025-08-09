@@ -63,6 +63,7 @@ class Planet {
 function updatePhysics() {
     if (timeScale === 0) return;
 
+    // 1. 중력 계산
     for (let i = 0; i < planets.length; i++) {
         const planetA = planets[i];
         let totalForceX = 0;
@@ -77,7 +78,8 @@ function updatePhysics() {
             const distSq = dx * dx + dy * dy;
             const dist = Math.sqrt(distSq);
 
-            if (dist < planetA.radius + planetB.radius) continue;
+            // 행성이 겹치더라도 중력은 계산합니다. (충돌은 별도 처리)
+            if (dist === 0) continue;
 
             const force = (G * planetA.mass * planetB.mass) / distSq;
             totalForceX += force * (dx / dist);
@@ -91,9 +93,67 @@ function updatePhysics() {
         planetA.vy += ay * timeScale;
     }
 
+    // 2. 위치 업데이트
     for (const planet of planets) {
         planet.x += planet.vx * timeScale;
         planet.y += planet.vy * timeScale;
+    }
+
+    // 3. 충돌 감지 (다음 단계에서 처리될 예정)
+    const collisions = [];
+    for (let i = 0; i < planets.length; i++) {
+        for (let j = i + 1; j < planets.length; j++) {
+            const planetA = planets[i];
+            const planetB = planets[j];
+            const dx = planetB.x - planetA.x;
+            const dy = planetB.y - planetA.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < planetA.radius + planetB.radius) {
+                collisions.push([planetA, planetB]);
+            }
+        }
+    }
+
+    // 4. 충돌 처리
+    const consumedPlanets = new Set();
+    collisions.forEach(([planetA, planetB]) => {
+        // 이미 다른 충돌로 인해 소멸된 행성은 처리하지 않음
+        if (consumedPlanets.has(planetA) || consumedPlanets.has(planetB)) {
+            return;
+        }
+
+        // 질량이 더 큰 쪽이 살아남음
+        const survivor = planetA.mass > planetB.mass ? planetA : planetB;
+        const consumed = planetA.mass > planetB.mass ? planetB : planetA;
+
+        // 운동량 보존 법칙: m1*v1 + m2*v2 = (m1+m2)*v_new
+        const totalMass = survivor.mass + consumed.mass;
+        survivor.vx = (survivor.mass * survivor.vx + consumed.mass * consumed.vx) / totalMass;
+        survivor.vy = (survivor.mass * survivor.vy + consumed.mass * consumed.vy) / totalMass;
+
+        // 부피 보존에 따른 새로운 반지름 계산 (r^3 ~ mass)
+        const newRadius = Math.cbrt(survivor.radius**3 + consumed.radius**3);
+        survivor.mass = totalMass;
+        survivor.radius = newRadius;
+        // SVG 요소의 반지름 속성을 즉시 업데이트
+        survivor.el.setAttribute('r', newRadius);
+
+        // 소멸된 행성을 기록
+        consumedPlanets.add(consumed);
+    });
+
+    // 5. 소멸된 행성들을 시뮬레이션에서 제거
+    if (consumedPlanets.size > 0) {
+        planets = planets.filter(p => !consumedPlanets.has(p));
+        for (const consumed of consumedPlanets) {
+            consumed.removeFrom(svgGroup);
+            if (focusedPlanet === consumed) {
+                focusedPlanet = planets[0] || null;
+            }
+        }
+        // UI 목록을 즉시 업데이트
+        updatePlanetList();
     }
 }
 
