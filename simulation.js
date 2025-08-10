@@ -59,6 +59,37 @@ class Planet {
     }
 }
 
+function createCollisionEffect(x, y, radius) {
+    const effect = document.createElementNS(SVG_NS, 'circle');
+    effect.setAttribute('cx', x);
+    effect.setAttribute('cy', y);
+    effect.setAttribute('r', radius);
+    effect.setAttribute('fill', 'white');
+    effect.setAttribute('fill-opacity', '0.7');
+    effect.style.pointerEvents = 'none'; // Prevent effect from blocking clicks
+
+    svgGroup.appendChild(effect);
+
+    let startTime = null;
+    const duration = 300; // 0.3 seconds
+
+    function animateEffect(timestamp) {
+        if (!startTime) startTime = timestamp;
+        const progress = (timestamp - startTime) / duration;
+
+        if (progress < 1) {
+            const easedProgress = 1 - Math.pow(1 - progress, 3); // Ease out cubic
+            effect.setAttribute('r', radius + easedProgress * radius * 1.5);
+            effect.setAttribute('fill-opacity', 0.7 * (1 - easedProgress));
+            requestAnimationFrame(animateEffect);
+        } else {
+            svgGroup.removeChild(effect);
+        }
+    }
+    requestAnimationFrame(animateEffect);
+}
+
+
 // --- Physics Engine (2D) ---
 function updatePhysics() {
     if (timeScale === 0) return;
@@ -127,6 +158,10 @@ function updatePhysics() {
         const survivor = planetA.mass > planetB.mass ? planetA : planetB;
         const consumed = planetA.mass > planetB.mass ? planetB : planetA;
 
+        // 충돌 지점 계산 (질량 중심)
+        const collisionX = (survivor.x * survivor.mass + consumed.x * consumed.mass) / (survivor.mass + consumed.mass);
+        const collisionY = (survivor.y * survivor.mass + consumed.y * consumed.mass) / (survivor.mass + consumed.mass);
+
         // 운동량 보존 법칙: m1*v1 + m2*v2 = (m1+m2)*v_new
         const totalMass = survivor.mass + consumed.mass;
         survivor.vx = (survivor.mass * survivor.vx + consumed.mass * consumed.vx) / totalMass;
@@ -138,6 +173,9 @@ function updatePhysics() {
         survivor.radius = newRadius;
         // SVG 요소의 반지름 속성을 즉시 업데이트
         survivor.el.setAttribute('r', newRadius);
+
+        // 시각 효과 생성
+        createCollisionEffect(collisionX, collisionY, newRadius);
 
         // 소멸된 행성을 기록
         consumedPlanets.add(consumed);
@@ -175,6 +213,12 @@ const SCENARIOS = {
         { name: 'Asteroid 1', x: -800, y: 200, vx: 2, vy: -0.5, mass: 1, radius: 3, color: '#bdc3c7' },
         { name: 'Asteroid 2', x: -700, y: -300, vx: 1.5, vy: 1, mass: 2, radius: 4, color: '#95a5a6' },
         { name: 'Asteroid 3', x: 900, y: 100, vx: -2.5, vy: 0, mass: 1.5, radius: 3, color: '#7f8c8d' }
+    ],
+    'black_hole': [
+        { name: 'Black Hole', x: 0, y: 0, vx: 0, vy: 0, mass: 10000, radius: 15, color: '#222' },
+        { name: 'Star 1', x: -1500, y: 0, vx: 0, vy: 3, mass: 500, radius: 20, color: '#f1c40f' },
+        { name: 'Star 2', x: 2000, y: 500, vx: -1, vy: -2, mass: 800, radius: 25, color: '#e67e22' },
+        { name: 'Planet', x: 0, y: -2500, vx: 3, vy: 0, mass: 20, radius: 8, color: '#3498db' }
     ]
 };
 
